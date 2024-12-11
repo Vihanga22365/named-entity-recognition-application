@@ -31,6 +31,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 
+
 uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
 def get_entities(entity_name, additional_context, text):
@@ -80,7 +81,7 @@ if uploaded_file is not None:
                         st.markdown(f"#### Name Entity {col_index + 1}")
                         entity_name = st.text_input("Entity Name", key=f'entity_name_{col_index}')
                         additional_context = st.text_area("Additional Context", height=100, key=f'additional_context_{col_index}')
-                        submit_button = st.form_submit_button(label='Add Entity')
+                        submit_button = st.form_submit_button(label='Recognize Entity Value')
 
                         if submit_button:
                             if entity_name:

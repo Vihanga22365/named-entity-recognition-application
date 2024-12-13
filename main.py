@@ -9,6 +9,7 @@ from PIL import Image
 from PIL import Image
 from io import BytesIO
 import base64
+import pandas as pd
 
 load_dotenv()
 
@@ -19,7 +20,7 @@ llm = ChatGoogleGenerativeAI(
     temperature=0,
 )
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_title="Named Entities Extraction")
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
@@ -31,14 +32,26 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 
+st.markdown("<h1 style='text-align: center;'>Named Entities Extraction</h1>", unsafe_allow_html=True)
 
 uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
-def get_entities(entity_name, additional_context, text):
-    system = """You are a specialization for recognize entities from the given 'Document Context'.  when user give the 'Entity Name' and the 'Additional Instruction Given For Identify Entity', according to the 'Document Context' you have to identify the entity value from the given 'Document Context'. Identify entity value only. nothing else."""
+def get_entities(formatted_entity_text, text):
+    system = """You are a specialization for recognize entities from the given 'Document Context'.  when user give the 'Entity Name' and the 'Additional Instruction Given For Identify Entity', according to the 'Document Context' you have to identify the entity value from the given 'Document Context'. Identify entity value only. nothing else. Give the output as following format for allthe given Entity Names.
+    
+    Example : 
+    
+        ***Entity Name 1:*** <Given Entity Name for Entity Name 1>
+        ***Additional Instruction Given For Identify Entity 1:*** <Given Additional Instruction for Entity Name 1>
+        ***Entity Value 1:*** <Identified Entity Value for Entity Name 1>
+        
+        ***Entity Name 2:*** <Given Entity Name for Entity Name 2>
+        ***Additional Instruction Given For Identify Entity 2:*** <Given Additional Instruction for Entity Name 2>
+        ***Entity Value 2:*** <Identified Entity Value for Entity Name 2>
+
+    """
     human = f"""
-        Entity Name: {entity_name}
-        Additional Instruction Given For Identify Entity: {additional_context}
+        {formatted_entity_text}
         Document Context: {text}
     """
     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
@@ -61,55 +74,78 @@ if uploaded_file is not None:
     if 'entities' not in st.session_state:
         st.session_state.entities = []
 
-    if 'num_columns' not in st.session_state:
-        st.session_state.num_columns = 2
+    # Input for number of entity extractions
+    num_entities = st.number_input('Number of Entity Extraction', min_value=1, value=1)
 
-    def add_column():
-        st.session_state.num_columns += 1
+    # Button to submit number and generate forms
+    if st.button('Generate Entity Forms'):
+        try:
+            num_entities = int(num_entities)
+            st.session_state.num_entities = num_entities
+        except ValueError:
+            st.error('Please enter a valid number')
 
-    # Determine the number of rows needed
-    num_rows = (st.session_state.num_columns + 1) // 2
+    if 'num_entities' in st.session_state:
+        num_entities = st.session_state.num_entities
 
-    for row in range(num_rows):
-        columns = st.columns(2)
-        for i in range(2):
-            col_index = row * 2 + i
-            if col_index < st.session_state.num_columns:
-                with columns[i]:
+        num_columns = 2
+        num_rows = (num_entities + num_columns - 1) // num_columns
+        
+        st.markdown(
+    """
+    <style>
+    [data-testid="stColumn"] {
+        padding: 2%;
+        box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgb(209, 213, 219) 0px 0px 0px 1px inset;
+        border-radius: 10px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+        for row in range(num_rows):
+            columns = st.columns(num_columns)
+            for i in range(num_columns):
+                entity_index = row * num_columns + i
+                if entity_index < num_entities:
+                    with columns[i]:
+                        with st.container():
+                            st.markdown(f"#### Name Entity {entity_index + 1}")
+                            st.text_input("Entity Name", key=f'entity_name_{entity_index}')
+                            st.text_area("Additional Context", height=100, key=f'additional_context_{entity_index}')
+
                     
-                    with st.form(key=f'entity_form_{col_index}'):
-                        st.markdown(f"#### Name Entity {col_index + 1}")
-                        entity_name = st.text_input("Entity Name", key=f'entity_name_{col_index}')
-                        additional_context = st.text_area("Additional Context", height=100, key=f'additional_context_{col_index}')
-                        submit_button = st.form_submit_button(label='Recognize Entity Value')
+        if st.button('Entity Extract'):
+            all_entities_provided = True
+            formatted_text = ""
 
-                        if submit_button:
-                            if entity_name:
-                                # Check if the entity is already in the session state
-                                if not any(entity["Entity Name"] == entity_name and entity["Additional Context"] == additional_context for entity in st.session_state.entities):
-                                    entity_value = get_entities(entity_name, additional_context, text)
-                                    st.session_state.entities.append({
-                                        "Entity Name": entity_name,
-                                        "Additional Context": additional_context,
-                                        "Entity Value": entity_value
-                                    })
-                                    st.markdown(f"##### Entity Value: {entity_value}")
-                                    # Check if all current columns have entity values
-                                    if all(f'entity_name_{j}' in st.session_state and st.session_state[f'entity_name_{j}'] for j in range(st.session_state.num_columns)):
-                                        add_column()
-                                    st.rerun()
-                            else:
-                                st.error("Entity Name is required")
+            for entity_index in range(num_entities):
+                entity_name = st.session_state.get(f'entity_name_{entity_index}', '')
+                additional_context = st.session_state.get(f'additional_context_{entity_index}', '')
+                if entity_name:
+                    formatted_text += f"\n***Entity Name {entity_index + 1}:*** {entity_name} \n***Additional Instruction Given For Identify Entity {entity_index + 1}:*** {additional_context}\n\n\n"
+                else:
+                    st.error(f"Entity Name {entity_index + 1} is required")
+                    all_entities_provided = False
 
-                        # Display all entity values for the current column
-                        previous_entity_value = None
+            if all_entities_provided:
+                # Process entity
+                entity_value = get_entities(formatted_text, text)
+                # st.write(formatted_text)
+                # st.write(entity_value)
+                
+                data = []
+                entities = entity_value.split("\n\n")
+                for entity in entities:
+                    if entity.strip():
+                        parts = entity.split("\n")
+                        entity_name = parts[0].split(":")[1].replace('*', '').strip()
+                        additional_context = parts[1].split(":")[1].replace('*', '').strip()
+                        entity_value = parts[2].split(":")[1].replace('*', '').strip()
+                        data.append([entity_name, additional_context, entity_value])
 
-                        for entity in st.session_state.entities:
-                            if entity["Entity Name"] == st.session_state.get(f'entity_name_{col_index}'):
-                                current_entity_value = entity['Entity Value']
-                                if current_entity_value != previous_entity_value:
-                                    st.markdown(f"##### Entity Value: {current_entity_value}")
-                                    previous_entity_value = current_entity_value
-                                break  # Exit the loop after finding the first matching entity
+                df = pd.DataFrame(data, columns=["Entity Name", "Additional Context", "Entity Value"])
+                st.table(df)
 
 

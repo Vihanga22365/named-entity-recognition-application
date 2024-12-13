@@ -116,7 +116,7 @@ if uploaded_file is not None:
                             st.text_area("Additional Context", height=100, key=f'additional_context_{entity_index}')
 
                     
-        if st.button('Entity Extract'):
+        if st.button('Extract Entities'):
             all_entities_provided = True
             formatted_text = ""
 

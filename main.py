@@ -75,7 +75,7 @@ if uploaded_file is not None:
         st.session_state.entities = []
 
     # Input for number of entity extractions
-    num_entities = st.number_input('Number of Entity Extraction', min_value=1, value=1)
+    num_entities = st.number_input('Number of entities to extract', min_value=1, value=1)
 
     # Button to submit number and generate forms
     if st.button('Generate Entity Forms'):
@@ -92,17 +92,17 @@ if uploaded_file is not None:
         num_rows = (num_entities + num_columns - 1) // num_columns
         
         st.markdown(
-    """
-    <style>
-    [data-testid="stColumn"] {
-        padding: 2%;
-        box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgb(209, 213, 219) 0px 0px 0px 1px inset;
-        border-radius: 10px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+            """
+            <style>
+            [data-testid="stColumn"] {
+                padding: 2%;
+                box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgb(209, 213, 219) 0px 0px 0px 1px inset;
+                border-radius: 10px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
         for row in range(num_rows):
             columns = st.columns(num_columns)
@@ -111,7 +111,7 @@ if uploaded_file is not None:
                 if entity_index < num_entities:
                     with columns[i]:
                         with st.container():
-                            st.markdown(f"#### Name Entity {entity_index + 1}")
+                            st.markdown(f"#### Entity Details {entity_index + 1}")
                             st.text_input("Entity Name", key=f'entity_name_{entity_index}')
                             st.text_area("Additional Context", height=100, key=f'additional_context_{entity_index}')
 

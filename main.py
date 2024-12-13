@@ -74,78 +74,68 @@ if uploaded_file is not None:
     if 'entities' not in st.session_state:
         st.session_state.entities = []
 
+
     # Input for number of entity extractions
     num_entities = st.number_input('Number of entities to extract', min_value=1, value=1)
 
-    # Button to submit number and generate forms
-    if st.button('Generate Entity Forms'):
-        try:
-            num_entities = int(num_entities)
-            st.session_state.num_entities = num_entities
-        except ValueError:
-            st.error('Please enter a valid number')
-
-    if 'num_entities' in st.session_state:
-        num_entities = st.session_state.num_entities
-
-        num_columns = 2
-        num_rows = (num_entities + num_columns - 1) // num_columns
+    # Determine the number of rows and columns
+    num_columns = 2  # Adjust the number of columns as needed
+    num_rows = int((num_entities + num_columns - 1) / num_columns)
         
-        st.markdown(
-            """
-            <style>
-            [data-testid="stColumn"] {
-                padding: 2%;
-                box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgb(209, 213, 219) 0px 0px 0px 1px inset;
-                border-radius: 10px;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
+    st.markdown(
+        """
+        <style>
+        [data-testid="stColumn"] {
+            padding: 2%;
+            box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgb(209, 213, 219) 0px 0px 0px 1px inset;
+            border-radius: 10px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-        for row in range(num_rows):
-            columns = st.columns(num_columns)
-            for i in range(num_columns):
-                entity_index = row * num_columns + i
-                if entity_index < num_entities:
-                    with columns[i]:
-                        with st.container():
-                            st.markdown(f"#### Entity Details {entity_index + 1}")
-                            st.text_input("Entity Name", key=f'entity_name_{entity_index}')
-                            st.text_area("Additional Context", height=100, key=f'additional_context_{entity_index}')
+    for row in range(num_rows):
+        columns = st.columns(num_columns)
+        for i in range(num_columns):
+            entity_index = row * num_columns + i
+            if entity_index < num_entities:
+                with columns[i]:
+                    with st.container():
+                        st.markdown(f"#### Entity Details {entity_index + 1}")
+                        st.text_input("Entity Name", key=f'entity_name_{entity_index}')
+                        st.text_area("Additional Context", height=100, key=f'additional_context_{entity_index}')
 
-                    
-        if st.button('Extract Entities'):
-            all_entities_provided = True
-            formatted_text = ""
-
-            for entity_index in range(num_entities):
-                entity_name = st.session_state.get(f'entity_name_{entity_index}', '')
-                additional_context = st.session_state.get(f'additional_context_{entity_index}', '')
-                if entity_name:
-                    formatted_text += f"\n***Entity Name {entity_index + 1}:*** {entity_name} \n***Additional Instruction Given For Identify Entity {entity_index + 1}:*** {additional_context}\n\n\n"
-                else:
-                    st.error(f"Entity Name {entity_index + 1} is required")
-                    all_entities_provided = False
-
-            if all_entities_provided:
-                # Process entity
-                entity_value = get_entities(formatted_text, text)
-                # st.write(formatted_text)
-                # st.write(entity_value)
                 
-                data = []
-                entities = entity_value.split("\n\n")
-                for entity in entities:
-                    if entity.strip():
-                        parts = entity.split("\n")
-                        entity_name = parts[0].split(":")[1].replace('*', '').strip()
-                        additional_context = parts[1].split(":")[1].replace('*', '').strip()
-                        entity_value = parts[2].split(":")[1].replace('*', '').strip()
-                        data.append([entity_name, additional_context, entity_value])
+    if st.button('Extract Entities'):
+        all_entities_provided = True
+        formatted_text = ""
 
-                df = pd.DataFrame(data, columns=["Entity Name", "Additional Context", "Entity Value"])
-                st.table(df)
+        for entity_index in range(num_entities):
+            entity_name = st.session_state.get(f'entity_name_{entity_index}', '')
+            additional_context = st.session_state.get(f'additional_context_{entity_index}', '')
+            if entity_name:
+                formatted_text += f"\n***Entity Name {entity_index + 1}:*** {entity_name} \n***Additional Instruction Given For Identify Entity {entity_index + 1}:*** {additional_context}\n\n\n"
+            else:
+                st.error(f"Entity Name {entity_index + 1} is required")
+                all_entities_provided = False
 
+        if all_entities_provided:
+            # Process entity
+            entity_value = get_entities(formatted_text, text)
+            # st.write(formatted_text)
+            # st.write(entity_value)
+            
+            data = []
+            entities = entity_value.split("\n\n")
+            for entity in entities:
+                if entity.strip():
+                    parts = entity.split("\n")
+                    entity_name = parts[0].split(":")[1].replace('*', '').strip()
+                    additional_context = parts[1].split(":")[1].replace('*', '').strip()
+                    entity_value = parts[2].split(":")[1].replace('*', '').strip()
+                    data.append([entity_name, additional_context, entity_value])
+
+            df = pd.DataFrame(data, columns=["Entity Name", "Additional Context", "Entity Value"])
+            st.table(df)
 
